@@ -1,36 +1,51 @@
 module Huffman where
 
-import Data.PQueue.Min
-data HuffmanTree a = Leaf Int a | Node Int (HuffmanTree a) (HuffmanTree a)
-    deriving (Eq, Show)
+import Data.Word
+import Data.Maybe
+import Data.Binary.Put
+import Data.Binary.Get
 
-value :: HuffmanTree a -> Int
-value (Leaf x _) = x
-value (Node x _ _) = x
+import qualified Data.PQueue.Min as PQ
+import qualified Data.Map.Strict as Map
+import qualified Data.ByteString as BS
 
-fromHWord :: HWord a -> HuffmanTree a
-fromHWord (HWord (x,i)) = Leaf i x
+import HuffmanStruct
 
-instance Eq a => Ord (HuffmanTree a) where
-    compare l r = compare (value l) (value r)
+type Map = Map.Map
+type ByteString = BS.ByteString
+type MinQueue = PQ.MinQueue
 
-newtype HWord a = HWord (a, Int) 
-    deriving (Eq, Show)
-
-instance Eq a => Ord (HWord a) where
-    compare (HWord (_, p)) (HWord (_, q)) = compare p q
-
-
-huffman :: Ord a => [HWord a] -> HuffmanTree a
+huffman :: Ord a => [Freq a] -> HuffmanTree a
 huffman list = runHuffman queue
-    where   queue = fromList $ Prelude.map fromHWord list
+    where   queue = PQ.fromList $ Prelude.map fromFreq list
             
 runHuffman :: Eq a => MinQueue (HuffmanTree a) -> HuffmanTree a
 runHuffman q = case step of
         Just q' -> runHuffman q'
-        Nothing -> findMin q
+        Nothing -> PQ.findMin q
     where   step = do
-                (e1,q1) <- minView q
-                (e2,q2) <- minView q1
+                (e1,q1) <- PQ.minView q
+                (e2,q2) <- PQ.minView q1
                 let e' = Node (value e1 + value e2) e1 e2
-                return $ insert e' q2
+                return $ PQ.insert e' q2
+
+getHistogram :: ByteString -> [Freq Word8]
+getHistogram bs = map Freq $ Map.toList hist 
+    where   hist = makeHistogram bs
+
+makeHistogram :: ByteString -> Map Word8 Int
+makeHistogram bs = BS.foldl count Map.empty bs
+    where   count map c = Map.alter update c map
+            update x = Just $ 1 + fromMaybe 0 x
+
+codeList :: HuffmanTree a -> [Code a String]
+codeList t = run t [] []
+    where
+        run (Leaf v c) res acc = (Code (c, v, reverse acc)) : res
+        run (Node _ l r) res acc = 
+            let left = run l res ('0':acc) in
+                run r left ('1':acc)
+
+huffmanSize :: [Code a String] -> Int
+huffmanSize list = foldl addCode 0 list
+    where addCode acc (Code (_, v, s)) = acc + v * (length s)

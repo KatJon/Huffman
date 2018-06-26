@@ -10,25 +10,19 @@ extra-source-files:
 - README.md
 - ChangeLog.md
 
-# Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
-
-# To avoid duplicated efforts in documentation and dealing with the
-# complications of embedding Haddock markup inside cabal files, it is
-# common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/Huffman#readme>
-
 dependencies:
 - base >= 4.7 && < 5
 - pqueue >= 1.4.1.1
+- containers >= 0.5.10.2
+- bytestring >= 0.10.8.2
+- binary == 0.8.5.1
 
 library:
   source-dirs: src
 
 executables:
   huffman-encode:
-    main:                Encode.hs
+    main:                encode/Main.hs
     source-dirs:         app
     ghc-options:
     - -threaded
@@ -37,7 +31,7 @@ executables:
     dependencies:
     - Huffman
   huffman-decode:
-    main:                Decode.hs
+    main:                decode/Main.hs
     source-dirs:         app
     ghc-options:
     - -threaded
